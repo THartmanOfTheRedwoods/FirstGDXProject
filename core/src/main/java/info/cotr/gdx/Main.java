@@ -2,12 +2,14 @@ package info.cotr.gdx;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -16,7 +18,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
-// import com.badlogic.gdx.utils.viewport.ScalingViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,14 +32,23 @@ public class Main extends ApplicationAdapter {
     private final ReentrantLock lock = new ReentrantLock();
     private Condition condition1; // This is a condition from a ReentrantLock used to trigger some game thread.
     private final GameThread[] gameThreads = new GameThread[2];
+    // Class allowing UI input processing to stage and game control processing to PacmanInputProcessor
+    private InputMultiplexer inputMultiplexer;
+    // Start of PacMan instance variables
+    private ShapeRenderer shapeRenderer;
+    private Maze maze;
+    private PacMan pacMan;
+    private Dots dots;
+    PacManInputProcessor pacManInputProcessor;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
-        image = new Texture("libgdx.png");
+        //image = new Texture("libgdx.png");
+        image = new Texture("pacman_bg.png");
 
         stage = new Stage(new ScreenViewport());
-        Gdx.input.setInputProcessor(stage);  // Make input go to stage before game app.
+        //Gdx.input.setInputProcessor(stage);  // Make input go to stage before game app.
 
         /*
         // Debug statements that helped me determine if uiskin atlas and json files were correctly defined.
@@ -80,8 +90,16 @@ public class Main extends ApplicationAdapter {
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                System.out.println("Button Clicked");
+                // Demo to signal other threads to run.
                 signalGameThreads(condition1);  // Signal all threads waiting on condition1
+                // Close the window when the button is clicked
+                window.remove();
+                // Check if the stage is no longer needed
+                if (stage.getActors().size == 0) {
+                    System.out.println("Disposing of stage.");
+                    stage.dispose();
+                    stage = null;
+                }
             }
         });
 
@@ -111,6 +129,22 @@ public class Main extends ApplicationAdapter {
         // Add window to the stage
         stage.addActor(window);
 
+        // Pacman stuff
+        shapeRenderer = new ShapeRenderer();
+        maze = new Maze();
+        pacMan = new PacMan(400, 400, maze);
+        // Initialize dots based on the maze layout
+        dots = new Dots(maze.getMazeLayout(), maze.getTileSize());
+        //Gdx.input.setInputProcessor(new PacManInputProcessor(pacMan));
+
+        // Create an InputMultiplexer
+        inputMultiplexer = new InputMultiplexer();
+        inputMultiplexer.addProcessor(stage); // Add the stage first (UI has priority)
+        pacManInputProcessor = new PacManInputProcessor(pacMan);
+        inputMultiplexer.addProcessor(pacManInputProcessor); // Add Pac-Man controls
+
+        // Set the InputMultiplexer as the global input processor
+        Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
     @Override
@@ -119,11 +153,27 @@ public class Main extends ApplicationAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.begin();
-        batch.draw(image, 140, 210);
+        batch.draw(image, 0, 0);
         batch.end();
 
-        stage.act(Gdx.graphics.getDeltaTime());
-        stage.draw();
+        // Update Pac-Man's position based on key states
+        pacManInputProcessor.update(Gdx.graphics.getDeltaTime());
+
+        // Check if Pac-Man collects a dot
+        if (dots.collectDot((int)pacMan.getX(), (int)pacMan.getY())) {
+            System.out.println("Dot collected!");
+        }
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        dots.render(shapeRenderer);
+        maze.render(shapeRenderer);
+        pacMan.render(shapeRenderer);
+        shapeRenderer.end();
+
+        if( stage != null) {  // I close the stage with the button, so test to see if I should show it.
+            stage.act(Gdx.graphics.getDeltaTime());
+            stage.draw();
+        }
     }
 
     private void signalGameThreads(Condition condition) {
@@ -144,9 +194,13 @@ public class Main extends ApplicationAdapter {
             try { gameThread.join(); }
             catch (InterruptedException ignored) { }
         }
+        shapeRenderer.dispose();
         batch.dispose();
         image.dispose();
-        stage.dispose();
+        if(stage != null) {
+            System.out.println("Stage should be null");
+            stage.dispose();
+        }
         skin.dispose();
     }
 }
