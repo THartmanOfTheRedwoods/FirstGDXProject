@@ -1,14 +1,10 @@
 package info.cotr.gdx;
 
-import com.badlogic.gdx.InputAdapter;
-
-public class PacManInputProcessor extends InputAdapter {
-    private PacMan pacMan;
-    private float speed = 70; // Movement speed
+public class PacManInputProcessor extends CharacterDecorator {
     private boolean upPressed, downPressed, leftPressed, rightPressed;
 
-    public PacManInputProcessor(PacMan pacMan) {
-        this.pacMan = pacMan;
+    public PacManInputProcessor(Character character) {
+        super(character);
     }
 
     @Override
@@ -49,14 +45,17 @@ public class PacManInputProcessor extends InputAdapter {
         return true;
     }
 
+    @Override
     public void update(float delta) {
         float deltaX = 0, deltaY = 0;
+
+        float speed = this.character.getSpeed();
 
         if (upPressed) deltaY += speed * delta;
         if (downPressed) deltaY -= speed * delta;
         if (leftPressed) deltaX -= speed * delta;
         if (rightPressed) deltaX += speed * delta;
 
-        pacMan.move(deltaX, deltaY);
+        this.character.move(deltaX, deltaY, delta);
     }
 }

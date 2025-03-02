@@ -1,8 +1,6 @@
 package info.cotr.gdx;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -15,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
@@ -23,7 +22,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-public class Main extends ApplicationAdapter {
+public class Main extends ApplicationAdapter implements CharacterObserver {
     private SpriteBatch batch;
     private Texture image;
     private Stage stage;
@@ -37,25 +36,25 @@ public class Main extends ApplicationAdapter {
     // Start of PacMan instance variables
     private ShapeRenderer shapeRenderer;
     private Maze maze;
-    private PacMan pacMan;
+    //private PacMan pacMan;
     private Dots dots;
-    PacManInputProcessor pacManInputProcessor;
+    //private PacManInputProcessor pacManInputProcessor;
+    private Character[] characters;
+    // Scoring variables
+    private static final int DOT_VALUE = 10;
+    private int score;
+    private Label lblScore;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
         //image = new Texture("libgdx.png");
         image = new Texture("pacman_bg.png");
-
         stage = new Stage(new ScreenViewport());
-        //Gdx.input.setInputProcessor(stage);  // Make input go to stage before game app.
-
         /*
         // Debug statements that helped me determine if uiskin atlas and json files were correctly defined.
         TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("uiskin.atlas"));
-        for (TextureAtlas.AtlasRegion region : atlas.getRegions()) {
-            System.out.println("Atlas contains region: " + region.name);
-        }
+        for (TextureAtlas.AtlasRegion region : atlas.getRegions()) { System.out.println("Atlas contains region: " + region.name); }
         System.out.println(Gdx.files.internal("uiskin.atlas").file().getAbsolutePath());
         */
 
@@ -70,15 +69,16 @@ public class Main extends ApplicationAdapter {
         generator.dispose();  // Dispose to avoid memory leaks
         // Add the generated font to the skin
         skin.add("default-font", font);
-
         skin.load(Gdx.files.internal("uiskin.json"));
 
         // Create a window (i.e. more like a draggable component inside the game window)
         Window window = new Window("Super Duper", skin);
-        window.setSize(300, 200);
-        window.setPosition(Gdx.graphics.getWidth() / 2f - 150, Gdx.graphics.getHeight() / 2f - 100); // Center it
+        window.setSize(600, 50);
+        // Centering Graphic
+        //window.setPosition(Gdx.graphics.getWidth() / 2f - 300, Gdx.graphics.getHeight() / 2f - 25); // Center it
+        window.setPosition(Gdx.graphics.getWidth() / 2f - 295, Gdx.graphics.getHeight() - 70);
 
-        // Let's set up the Game threads and thread control mechanisms.
+        // Let's set up the Game threads and thread control mechanisms as a demo.
         condition1 = lock.newCondition();
         for(int i=0; i < this.gameThreads.length; i++) {
             gameThreads[i] = new GameThread(lock, condition1, "gt" + i);
@@ -86,7 +86,7 @@ public class Main extends ApplicationAdapter {
         }
 
         // Create a button
-        TextButton button = new TextButton("Click Me!", skin);
+        TextButton button = new TextButton("Demo Button!", skin);
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -96,7 +96,7 @@ public class Main extends ApplicationAdapter {
                 window.remove();
                 // Check if the stage is no longer needed
                 if (stage.getActors().size == 0) {
-                    System.out.println("Disposing of stage.");
+                    // System.out.println("Disposing of stage.");
                     stage.dispose();
                     stage = null;
                 }
@@ -105,10 +105,16 @@ public class Main extends ApplicationAdapter {
 
         // Add the button to the window
         window.add(button).pad(20);
-        window.row(); // Move to next row in row layout
+        // Create scoring label
+        lblScore = new Label("Score: 0", skin);
+        // Add the label to the window
+        window.add(lblScore);
+
+        //window.row(); // Move to next row in row layout
 
         // Make the window draggable
         //window.setMovable(true);
+
         // Make the ENTIRE window draggable, not just the title bar
         window.addListener(new InputListener() {
             private float startX, startY;
@@ -131,20 +137,29 @@ public class Main extends ApplicationAdapter {
 
         // Pacman stuff
         shapeRenderer = new ShapeRenderer();
+        // TODO: Move the environment creation to the PacMan2dGameFactory as well.
+        // Create the Environment
         maze = new Maze();
-        pacMan = new PacMan(400, 400, maze);
         // Initialize dots based on the maze layout
         dots = new Dots(maze.getMazeLayout(), maze.getTileSize());
-        //Gdx.input.setInputProcessor(new PacManInputProcessor(pacMan));
+        // Initialize Game characters
+        Abstract2dGameFactory pacManFactory = new PacMan2dGameFactory();
+        characters = pacManFactory.createCharacters(maze);
+
+        // Register this Main game class as a character watcher so we can react to character events.
+        for(Character c : characters) {
+            c.watchCharacter(this);
+        }
 
         // Create an InputMultiplexer
         inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(stage); // Add the stage first (UI has priority)
-        pacManInputProcessor = new PacManInputProcessor(pacMan);
-        inputMultiplexer.addProcessor(pacManInputProcessor); // Add Pac-Man controls
+        inputMultiplexer.addProcessor((InputAdapter)characters[0]); // Add Pac-Man controls
 
         // Set the InputMultiplexer as the global input processor
         Gdx.input.setInputProcessor(inputMultiplexer);
+        // Set the scoring variables
+        score = 0;
     }
 
     @Override
@@ -156,24 +171,36 @@ public class Main extends ApplicationAdapter {
         batch.draw(image, 0, 0);
         batch.end();
 
-        // Update Pac-Man's position based on key states
-        pacManInputProcessor.update(Gdx.graphics.getDeltaTime());
-
-        // Check if Pac-Man collects a dot
-        if (dots.collectDot((int)pacMan.getX(), (int)pacMan.getY())) {
-            System.out.println("Dot collected!");
-        }
-
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         dots.render(shapeRenderer);
         maze.render(shapeRenderer);
-        pacMan.render(shapeRenderer);
+        for (Character c : characters) {
+            c.render(shapeRenderer);
+        }
         shapeRenderer.end();
 
+        float deltaTime = Gdx.graphics.getDeltaTime();
+        // Update Pac-Man's position based on key states
+        // Update the ghost position (e.g. Polymorphism).
+        for(Character c : characters) { c.update(deltaTime); }
+
+        // Check if Pac-Man collects a dot
+        if (dots.collectDot((int)characters[0].getX(), (int)characters[0].getY())) {
+            this.score += DOT_VALUE;
+            this.lblScore.setText(this.score);
+        }
+
         if( stage != null) {  // I close the stage with the button, so test to see if I should show it.
-            stage.act(Gdx.graphics.getDeltaTime());
+            stage.act(deltaTime);
             stage.draw();
         }
+    }
+
+    @Override
+    public void update(Character character, PacManEvent event) {
+        System.out.println("A Ghost got PacMan.");
+        this.dispose();
+        this.create();
     }
 
     private void signalGameThreads(Condition condition) {
@@ -198,9 +225,10 @@ public class Main extends ApplicationAdapter {
         batch.dispose();
         image.dispose();
         if(stage != null) {
-            System.out.println("Stage should be null");
+            // System.out.println("Stage should be null");
             stage.dispose();
         }
         skin.dispose();
     }
+
 }

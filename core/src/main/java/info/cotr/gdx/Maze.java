@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class Maze {
     private int[][] maze;
-    private int tileSize = 20;
+    private final int tileSize = 20;
 
     public Maze() {
         maze = new int[][]{
@@ -67,6 +67,14 @@ public class Maze {
             }
         }
         return false;
+    }
+
+    public boolean isInMaze(int x, int y) {
+        return x >= 0 && x < maze[0].length && y >= 0 && y < maze.length;
+    }
+
+    public boolean isWalkable(int x, int y) {
+        return maze[y][x] == 0;
     }
 
     // Get the maze layout

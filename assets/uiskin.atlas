@@ -20,7 +20,7 @@ button-down
 window-bg
   rotate: false
   xy: 10, 60
-  size: 200, 200
-  orig: 200, 200
+  size: 640, 50
+  orig: 640, 50
   offset: 0, 0
   index: -1

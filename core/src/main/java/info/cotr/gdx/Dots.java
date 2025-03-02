@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class Dots {
     private boolean[][] dots;
-    private int dotSize = 5; // Size of each dot
+    private final int dotSize = 5; // Size of each dot
     private int rows, cols;
     private int tileSize; // Size of each tile in the maze
 
