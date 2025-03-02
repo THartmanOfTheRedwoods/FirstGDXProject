@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PacMan implements Character {
-    private CharacterType type;
     private float x, y;
     private final int size = 9;
     private final Color color = Color.YELLOW;
@@ -31,7 +30,7 @@ public class PacMan implements Character {
         return SingletonHelper.INSTANCE;
     }
 
-    // TODO: Create a PacMan initializaer that takes a path to a json file and configures the PacMan object.
+    // TODO: Create a PacMan initializer that takes a path to a json file and configures the PacMan object.
     // Method to initialize the singleton with parameters since we can't pass to a constructor for the Bill Pugh style.
     public PacMan initialize(float x, float y, Maze maze) {
         if (this.characterObservers == null) { // Only instantiate these once on the object.
@@ -40,7 +39,6 @@ public class PacMan implements Character {
             this.speed = 70;
             this.maze = maze;
             this.tileSize = maze.getTileSize();
-            this.type = CharacterType.PACMAN;
             this.isMovingX = true; // Start by moving horizontally
             this.direction = new Vector2(1, 0); // Default direction: right
             this.characterObservers = new ArrayList<>();

@@ -31,8 +31,6 @@ public class Main extends ApplicationAdapter implements CharacterObserver {
     private final ReentrantLock lock = new ReentrantLock();
     private Condition condition1; // This is a condition from a ReentrantLock used to trigger some game thread.
     private final GameThread[] gameThreads = new GameThread[2];
-    // Class allowing UI input processing to stage and game control processing to PacmanInputProcessor
-    private InputMultiplexer inputMultiplexer;
     // Start of PacMan instance variables
     private ShapeRenderer shapeRenderer;
     private Maze maze;
@@ -152,7 +150,8 @@ public class Main extends ApplicationAdapter implements CharacterObserver {
         }
 
         // Create an InputMultiplexer
-        inputMultiplexer = new InputMultiplexer();
+        // Class allowing UI input processing to stage and game control processing to PacmanInputProcessor
+        InputMultiplexer inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(stage); // Add the stage first (UI has priority)
         inputMultiplexer.addProcessor((InputAdapter)characters[0]); // Add Pac-Man controls
 

@@ -82,6 +82,11 @@ public class Maze {
         return maze;
     }
 
+    // Set the maze layout
+    public void getMazeLayout(int[][] maze) {
+        this.maze = maze;
+    }
+
     // Get the tile size
     public int getTileSize() {
         return tileSize;

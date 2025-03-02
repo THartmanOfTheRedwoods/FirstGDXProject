@@ -1,8 +1,5 @@
 package info.cotr.gdx;
 
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-
 public class PacMan2dGameFactory implements Abstract2dGameFactory {
     @Override
     public Character createCharacter(float x, float y, CharacterType type, Maze maze, Character dependent) {
@@ -24,13 +21,12 @@ public class PacMan2dGameFactory implements Abstract2dGameFactory {
     @Override
     public Character[] createCharacters(Maze maze) {
         Character redGhost = this.createCharacter(130, 200, CharacterType.SHADOW, maze, null);
-        Character[] characters = new Character[]{
+        return new Character[]{
             this.createCharacter(400, 400, CharacterType.M_PACMAN, maze, null),
             redGhost,
             this.createCharacter(300, 300, CharacterType.SPEEDY, maze, null),
             this.createCharacter(130, 200, CharacterType.BASHFUL, maze, redGhost),
             this.createCharacter(310, 300, CharacterType.POKEY, maze, null),
         };
-        return characters;
     }
 }
